@@ -1,5 +1,7 @@
 import json
+import time
 from pprint import pprint
+from random import *
 import numpy as np
 board = []
 for i in range(0,10):
@@ -112,6 +114,125 @@ def check_solution(finished):
             print(row)
             print(sum(row))
 '''
+def vectorize(options):
+    #this function takes in all of the possible inputs for a cell and returns a binary representation
+    #for example: vectorize(board_options[(0,0)]) would return binary representation of candidates for that cell
+    inputs = [0]*len(possible)
+    for number in options:
+        inputs[number-1] = 1
+    return inputs
+board_options = check_solution(test_solution)
+#print(vectorize(board_options[(0,1)]))
+
+def sigmoid(x, deriv=False):
+    if deriv:
+        return(x*(1-x))
+    return 1/1+np.exp(-1)
+def think(cell, neurons, numlayers, alpha, dropout, dp):
+    outputs = [0] * len(possible)
+    #create a neural network based on any random inputs, make a list of synaptic weight
+    layers = range(numlayers)
+    layers[0] = vectorize(cell)
+    syn = []
+    for i in range(numlayers):
+        if i==0:
+            syn.append(np.random.random((len(layers[0]),neurons))*2-1)
+            layers.append(sigmoid(np.dot(layers[i],syn[i])))
+        elif i > 0 and i < numlayers-1:
+            #for as many hidden layers there are, in a non deep learning network then this would iterate once
+            syn.append(np.random.random((neurons, len(syn[i-1])))*2-1)
+            layers.append(sigmoid(np.dot(layers[i],syn[i])))
+        elif i == numlayers - 1:
+            #synaptic weights that lead to the outputting value
+            syn.append(np.random.random((len(syn[i-1]),9))*2-1)
+            layers.append(sigmoid(np.dot(layers[i],syn[i])))
+            print(layers[i])
+    #print(syn)
+    outputs[layers[numlayers -1]+1] = 1
+    #print(layers)
+    return outputs
+
+class species(object):
+    start_time = 0
+    neurons = 0
+    numlayers = 0
+    alpha = 0
+    dropout = False
+    dp = 0
+
+    def __init__(self,neurons,numlayers,alpha,dropout,dp):
+        self.start_time = time.time()
+        self.neurons = neurons
+        self.numlayers = numlayers
+        self.alpha = alpha
+        self.dropout = dropout
+        self.dp = dp
+exampleGenus = species(20,2,3,True,95)
+print(exampleGenus.start_time)
+def predict(cell):
+    #call this method like predict(board_options[(0,1)]), and it will return what number should go in that cell
+    layer0 = vectorize(cell)
+    outputs = [0]*len(layer0)
+    choices = []
+    for item in layer0:
+        if item == 1:
+            choices.append(item)
+    guess_index = random() * len(choices)
+    answer = choices[int(guess_index)]
+    '''
+    syn0 = np.random.random((9,20))*2-1
+    syn1 = np.random.random((1,9))*2-1
+    layer1 = sigmoid(np.dot(layer0,syn0))
+    layer2 = sigmoid(np.dot(layer1,syn1))
+    '''
+    outputs[int(answer)-1] = 1
+    return outputs
+    #print(predict(board_options[(2,2)]))
+#print(think(board_options[(0,0)],exampleGenus.neurons,exampleGenus.numlayers,exampleGenus.alpha,exampleGenus.dropout,exampleGenus.dp))
+#now that we are generating guesses, attempt to solve a sudoku with an example genus
+def solve_attempt(problem, test_species):
+    #this is the method where we cook with gas
+    possibilities = check_solution(problem)
+    #pprint(possibilities)
+    while(check_solution(problem) is not None):
+        options = check_solution(problem)
+        #pprint(options)
+        counter = 0
+        for row in problem:
+            for cell in row:
+                if cell == 0:
+                   counter+= 1
+        if counter == 0:
+            return(problem)
+        for item in options:
+            #print(item)
+            #this checks for mistakes, if any empty cell has no options for solutions, kill this phenotype
+            #print(item)
+            #print(options[item])
+            if options[item] == []:
+                print("trying to fail")
+                return [[0]*9]*9
+                
+            else:
+                #this makes a guess in a given cell then it reiterates based on the given information
+                cell_solution = think(options[item],test_species.neurons,test_species.numlayers,test_species.alpha,test_species.dropout,test_species.dp)
+                tile_value = -1
+                for i in range(len(cell_solution)):
+                    if cell_solution[i] == 1:
+                        tile_value = i+1 
+                if(tile_value == -1):
+                    print("ruh-roh")
+                #print(tile_value)
+                pprint(problem)
+                problem[item[0]][item[1]] = tile_value                
+                #print(problem[item[0]][item[1]])
+                #think about a solution for this tile
+                
+        #until we have found a perfect solution iterate through
+        possibilities = options
+    return problem
+print(solve_attempt(test_solution, exampleGenus))
 #print(grid(test_solution))
 #pprint(test_solution)
-pprint(check_solution(test_solution))
+#pprint(check_solution(test_solution))
+#pprint(board_options)
